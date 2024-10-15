@@ -1,12 +1,13 @@
 {
   "manifest_version": 3,
-  "name": "LaunchDarkly Feature Flags Viewer",
+  "name": "Feature Flags Viewer",
   "version": "1.0",
   "description": "Displays the response of LaunchDarkly XHR request for active feature flags.",
   "permissions": [
     "activeTab",
     "webRequest",
-    "storage"
+    "storage",
+    "tabs"
   ],
   "host_permissions": [
     "*://app.launchdarkly.com/*"
