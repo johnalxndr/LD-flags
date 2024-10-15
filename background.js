@@ -1,49 +1,28 @@
-let currentTabId = null;
+let flagResponse = null;
+let retryRequested = false;
 
-// Function to inject content script
-function injectContentScript(tabId) {
-  chrome.scripting.executeScript({
-    target: { tabId: tabId },
-    files: ['content.js']
-  }, () => {
-    if (chrome.runtime.lastError) {
-      console.error('Error injecting content script:', chrome.runtime.lastError);
-    } else {
-      console.log('Content script injected successfully into tab:', tabId);
+chrome.webRequest.onCompleted.addListener(
+  (details) => {
+    if (retryRequested && details.url.includes("https://app.launchdarkly.com/sdk/evalx/")) {
+      fetch(details.url, { credentials: "include" })
+        .then((response) => response.json())
+        .then((data) => {
+          flagResponse = data;
+          retryRequested = false; // Reset retry request
+          chrome.runtime.sendMessage({ type: "updatePopup" });
+        })
+        .catch((error) => console.error("Error fetching LaunchDarkly response:", error));
     }
-  });
-}
+  },
+  { urls: ["*://app.launchdarkly.com/*"] }
+);
 
-// Listen for tab activation
-chrome.tabs.onActivated.addListener((activeInfo) => {
-  currentTabId = activeInfo.tabId;
-  console.log('Tab activated:', currentTabId);
-  injectContentScript(currentTabId);
-});
-
-// Listen for tab updates
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === 'loading' && tab.active) {
-    currentTabId = tabId;
-    console.log('Tab updated:', currentTabId);
-    injectContentScript(currentTabId);
-  }
-});
-
-// Listen for messages from popup
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  console.log('Message received in background:', message);
-  if (message.action === 'getFlags') {
-    if (currentTabId) {
-      console.log('Sending getAllFlags message to tab:', currentTabId);
-      chrome.tabs.sendMessage(currentTabId, { action: 'getAllFlags' }, (response) => {
-        console.log('Received response from content script:', response);
-        sendResponse(response);
-      });
-    } else {
-      console.error('No current tab ID');
-      sendResponse(null);
-    }
-    return true;  // Indicates that the response is sent asynchronously
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
+  if (request.type === "getFlagResponse") {
+    sendResponse(flagResponse);
+  } else if (request.type === "retry") {
+    flagResponse = null;
+    retryRequested = true;
+    chrome.runtime.sendMessage({ type: "updatePopup" });
   }
 });

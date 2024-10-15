@@ -1,9 +1,19 @@
 {
   "manifest_version": 3,
-  "name": "Feature Flag Viewer",
+  "name": "LaunchDarkly Feature Flags Viewer",
   "version": "1.0",
-  "description": "View client-side feature flags using LaunchDarkly SDK",
-  "permissions": [],
+  "description": "Displays the response of LaunchDarkly XHR request for active feature flags.",
+  "permissions": [
+    "activeTab",
+    "webRequest",
+    "storage"
+  ],
+  "host_permissions": [
+    "*://app.launchdarkly.com/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup.html"
   }
